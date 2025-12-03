@@ -6,7 +6,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-exports.registerUser = async (req, res) => {
+exports.register = async (req, res) => {
     try {
         let { name, email, password } = req.body;
 
@@ -67,7 +67,7 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-exports.loginUser = async (req, res) => {
+exports.login = async (req, res) => {
     try {
         let { email, password } = req.body;
 
