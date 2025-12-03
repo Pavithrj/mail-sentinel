@@ -3,10 +3,9 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const protectedRoutes = require('./routes/emailRoutes');
 
-// const teamRoutes = require('./routes/teamRoutes');
 // const errorHandler = require('./middleware/error');
-// const uiRoutes = require('./routes/uiRoutes');
 
 const PORT = process.env.PORT || 5000;
 
@@ -17,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
-// app.use("/api/team", teamRoutes);
+app.use('/api/test', protectedRoutes);
 
 // app.use(errorHandler);
 
