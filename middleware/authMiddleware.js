@@ -5,8 +5,18 @@ exports.protect = async (req, res, next) => {
     try {
         let token;
 
-        if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
-            token = req.headers.authorization.split(" ")[1];
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+
+        if (authHeader && typeof authHeader === "string") {
+            const parts = authHeader.split(" ");
+
+            if (parts.length === 2 && parts[0].toLowerCase() === "bearer") {
+                token = parts[1];
+            }
+        }
+
+        if (!token && req.headers["x-auth-token"]) {
+            token = req.headers["x-auth-token"];
         }
 
         if (!token) {
@@ -14,6 +24,7 @@ exports.protect = async (req, res, next) => {
         }
 
         let decoded;
+
         try {
             decoded = jwt.verify(token, process.env.JWT_SECRET);
         } catch (err) {
@@ -21,6 +32,7 @@ exports.protect = async (req, res, next) => {
         }
 
         const user = await User.findById(decoded.id).select("-password");
+
         if (!user) {
             return res.status(401).json({ success: false, message: "User no longer exists" });
         }
@@ -29,14 +41,18 @@ exports.protect = async (req, res, next) => {
         next();
     } catch (error) {
         console.error("Auth middleware error:", error);
+
         return res.status(500).json({ success: false, message: "Server error in auth middleware" });
     }
 };
 
 exports.requireAdmin = (req, res, next) => {
-    if (!req.user) return res.status(401).json({ success: false, message: "Not authorized" });
+    if (!req.user)
+        return res.status(401).json({ success: false, message: "Not authorized" });
+
     if (req.user.role !== "admin") {
         return res.status(403).json({ success: false, message: "Admin access required" });
     }
+
     next();
 };
