@@ -8,7 +8,7 @@ const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$
 
 exports.register = async (req, res) => {
     try {
-        let { name, email, password } = req.body;
+        let { name, email, password, role } = req.body;
 
         name = name?.trim();
         email = email?.trim();
@@ -35,15 +35,15 @@ exports.register = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await User.create({
+        const newUser = await User.create({
             name,
             email,
             password: hashedPassword,
-            role: "user"
+            role: role || "user"
         });
 
         const token = jwt.sign(
-            { id: user._id, email: user.email, role: user.role },
+            { id: newUser._id, email: newUser.email, role: newUser.role },
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
@@ -52,10 +52,10 @@ exports.register = async (req, res) => {
             message: "User registered successfully",
             token,
             user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role
+                id: newUser._id,
+                name: newUser.name,
+                email: newUser.email,
+                role: newUser.role
             }
         });
     } catch (error) {
@@ -107,5 +107,53 @@ exports.login = async (req, res) => {
         });
     } catch (error) {
         return res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({ role: "user" }).select("-password");
+        res.json({ total: users.length, users });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.getAllAdmins = async (req, res) => {
+    try {
+        const admins = await User.find({ role: "admin" }).select("-password");
+        res.json({ total: admins.length, admins });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.deleteUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = await User.findByIdAndDelete(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "User deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.deleteAdmin = async (req, res) => {
+    try {
+        const adminId = req.params.id;
+        const admin = await User.findByIdAndDelete(adminId);
+
+        if (!admin) {
+            return res.status(404).json({ message: "Admin not found" });
+        }
+
+        res.json({ message: "Admin deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 };
