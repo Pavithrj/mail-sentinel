@@ -5,11 +5,15 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const protectedRoutes = require('./routes/emailRoutes');
 
-const PORT = process.env.PORT || 5000;
-
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+    console.warn("⚠️ WARNING: JWT_SECRET is missing. Tokens may not verify correctly.");
+}
+
+const PORT = process.env.PORT || 5000;
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
