@@ -20,19 +20,18 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: "Name must be at least 2 characters" });
 
         if (!/^[A-Za-z ]+$/.test(name))
-            return res.status(400).json({ message: "Name should contain only letters" });
+            return res.status(400).json({ message: "Name should contain only alphabets" });
 
         if (!emailRegex.test(email))
             return res.status(400).json({ message: "Invalid email format" });
 
         if (!passwordRegex.test(password))
-            return res.status(400).json({
-                message: "Password must be at least 8 characters, include uppercase, lowercase, number, and special character",
-            });
+            return res.status(400).json({ message: "Password must have 8+ chars, uppercase, lowercase, number & special symbol" });
 
         const existingUser = await User.findOne({ email });
+
         if (existingUser)
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(400).json({ message: "Email already exists" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -40,6 +39,7 @@ exports.registerUser = async (req, res) => {
             name,
             email,
             password: hashedPassword,
+            role: "user"
         });
 
         const token = jwt.sign(
@@ -55,11 +55,15 @@ exports.registerUser = async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                role: user.role,
-            },
+                role: user.role
+            }
         });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Email already registered" });
+        }
+
+        return res.status(500).json({ message: "Server error", error: error.message });
     }
 };
 
@@ -70,16 +74,18 @@ exports.loginUser = async (req, res) => {
         email = email?.trim();
 
         if (!email || !password)
-            return res.status(400).json({ message: "Email and password are required" });
+            return res.status(400).json({ message: "Email & password required" });
 
         if (!emailRegex.test(email))
             return res.status(400).json({ message: "Invalid email format" });
 
         const user = await User.findOne({ email });
+
         if (!user)
             return res.status(400).json({ message: "Invalid credentials" });
 
         const isMatch = await bcrypt.compare(password, user.password);
+
         if (!isMatch)
             return res.status(400).json({ message: "Invalid credentials" });
 
@@ -96,10 +102,10 @@ exports.loginUser = async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                role: user.role,
-            },
+                role: user.role
+            }
         });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        return res.status(500).json({ message: "Server error", error: error.message });
     }
 };
