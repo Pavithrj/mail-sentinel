@@ -33,13 +33,21 @@ exports.register = async (req, res) => {
         if (existingUser)
             return res.status(400).json({ message: "Email already exists" });
 
+        if (role === "admin") {
+            const adminExists = await User.findOne({ role: "admin" });
+
+            if (adminExists) {
+                return res.status(403).json({ message: "Admin account already exists. Only one admin is allowed." });
+            }
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = await User.create({
             name,
             email,
             password: hashedPassword,
-            role: role || "user"
+            role: role === "admin" ? "admin" : "user"
         });
 
         const token = jwt.sign(
