@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const dayjs = require('dayjs');
 const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
+const { signAccessToken, generateRefreshTokenString } = require('../utils/tokenUtil');
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -8,7 +10,7 @@ const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$
 
 exports.register = async (req, res) => {
     try {
-        let { name, email, password, role } = req.body;
+        let { name, email, password } = req.body;
 
         name = name?.trim();
         email = email?.trim();
@@ -31,34 +33,32 @@ exports.register = async (req, res) => {
         const existingUser = await User.findOne({ email });
 
         if (existingUser)
-            return res.status(400).json({ message: "Email already exists" });
+            return res.status(400).json({ message: "Email already registered" });
 
-        if (role === "admin") {
-            const adminExists = await User.findOne({ role: "admin" });
+        const hashed = await bcrypt.hash(password, 10);
+        const newUser = await User.create({ name, email, password: hashed, role: "user" });
 
-            if (adminExists) {
-                return res.status(403).json({ message: "Admin account already exists. Only one admin is allowed." });
-            }
-        }
+        const accessToken = signAccessToken({ id: newUser._id, role: newUser.role });
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const refreshTokenString = generateRefreshTokenString();
+        const expiresAt = dayjs().add(7, "day").toDate();
 
-        const newUser = await User.create({
-            name,
-            email,
-            password: hashedPassword,
-            role: role === "admin" ? "admin" : "user"
+        await RefreshToken.create({
+            user: newUser._id,
+            token: refreshTokenString,
+            expiresAt
         });
 
-        const token = jwt.sign(
-            { id: newUser._id, email: newUser.email, role: newUser.role },
-            process.env.JWT_SECRET,
-            { expiresIn: "7d" }
-        );
+        res.cookie("refreshToken", refreshTokenString, {
+            httpOnly: true,
+            secure: process.env.COOKIE_SECURE === "true",
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
-        res.status(201).json({
+        return res.status(201).json({
             message: "User registered successfully",
-            token,
+            accessToken,
             user: {
                 id: newUser._id,
                 name: newUser.name,
