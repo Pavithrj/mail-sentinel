@@ -4,6 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const adminAuthRoutes = require('./routes/adminAuthRoutes');
 const protectedRoutes = require('./routes/emailRoutes');
 
 dotenv.config();
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminAuthRoutes);
 app.use("/api/test", protectedRoutes);
 
 app.get("/", (req, res) => {
